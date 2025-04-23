@@ -1,8 +1,36 @@
-import hashlib
 from datetime import datetime
+from hashlib import sha256
 
-import flet as ft
-import pyperclip
+from flet import (
+    ButtonStyle,
+    Colors,
+    Column,
+    Container,
+    CrossAxisAlignment,
+    DataCell,
+    DataColumn,
+    DataRow,
+    DataTable,
+    Divider,
+    ElevatedButton,
+    IconButton,
+    Icons,
+    ListTile,
+    ListView,
+    MainAxisAlignment,
+    Padding,
+    Page,
+    ProgressRing,
+    RoundedRectangleBorder,
+    Row,
+    Slider,
+    Text,
+    TextField,
+    alignment,
+    app,
+    border,
+)
+from pyperclip import copy as pyperclip_copy
 
 from src.core.password_manager import PasswordManager
 
@@ -16,9 +44,9 @@ class GUIApp:
         self.selected_uid = None
 
     def run(self):
-        ft.app(target=self.main)
+        app(target=self.main)
 
-    def main(self, page: ft.Page):
+    def main(self, page: Page):
         self.page = page
         self.page.title = "Password Manager"
         self.page.window_width = 800
@@ -33,14 +61,14 @@ class GUIApp:
             try:
                 self.password_manager = PasswordManager(master_password)
                 # ローディング表示を追加
-                loading = ft.ProgressRing()
-                loading_text = ft.Text("パスワードを読み込んでいます...")
+                loading = ProgressRing()
+                loading_text = Text("パスワードを読み込んでいます...")
                 self.page.clean()
                 self.page.add(
-                    ft.Column(
+                    Column(
                         [loading, loading_text],
-                        alignment=ft.MainAxisAlignment.CENTER,
-                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                        alignment=MainAxisAlignment.CENTER,
+                        horizontal_alignment=CrossAxisAlignment.CENTER,
                     )
                 )
 
@@ -64,27 +92,25 @@ class GUIApp:
                     f"Unexpected error: {str(ex)}. Please try again."
                 )
 
-        master_password_field = ft.TextField(
+        master_password_field = TextField(
             label="Enter Master Password", password=True, width=300
         )
 
-        master_password_button = ft.ElevatedButton(
+        master_password_button = ElevatedButton(
             text="Submit", on_click=on_master_password_submit
         )
 
-        error_text = (
-            ft.Text(error_message, color=ft.Colors.RED) if error_message else None
-        )
+        error_text = Text(error_message, color=Colors.RED) if error_message else None
 
         self.page.add(
-            ft.Column(
+            Column(
                 [
-                    error_text if error_text else ft.Container(),
+                    error_text if error_text else Container(),
                     master_password_field,
                     master_password_button,
                 ],
-                alignment=ft.MainAxisAlignment.CENTER,
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                alignment=MainAxisAlignment.CENTER,
+                horizontal_alignment=CrossAxisAlignment.CENTER,
             )
         )
 
@@ -92,49 +118,49 @@ class GUIApp:
         self.page.clean()
 
         # サイドペイン
-        self.password_list = ft.ListView(expand=1, spacing=10)
+        self.password_list = ListView(expand=1, spacing=10)
         self.update_password_list()
 
         # メインペイン
-        self.detail_view = ft.Column(expand=3, spacing=10)
+        self.detail_view = Column(expand=3, spacing=10)
 
         # 追加ボタン
-        add_button = ft.Container(
-            content=ft.IconButton(
-                icon=ft.Icons.ADD,
-                icon_color=ft.Colors.WHITE,
-                bgcolor=ft.Colors.GREEN,
+        add_button = Container(
+            content=IconButton(
+                icon=Icons.ADD,
+                icon_color=Colors.WHITE,
+                bgcolor=Colors.GREEN,
                 tooltip="Add Password",
                 on_click=self.add_password,
-                style=ft.ButtonStyle(
-                    shape=ft.RoundedRectangleBorder(radius=8),
-                    padding=ft.Padding(8, 8, 8, 8),
+                style=ButtonStyle(
+                    shape=RoundedRectangleBorder(radius=8),
+                    padding=Padding(8, 8, 8, 8),
                 ),
             ),
             width=200,
-            alignment=ft.alignment.center,
-            padding=ft.Padding(10, 0, 10, 0),
+            alignment=alignment.center,
+            padding=Padding(10, 0, 10, 0),
         )
 
         # レイアウト
         self.page.add(
-            ft.Row(
+            Row(
                 [
-                    ft.Container(
-                        content=ft.Column(
+                    Container(
+                        content=Column(
                             [
                                 self.password_list,
-                                ft.Container(
+                                Container(
                                     content=add_button,
-                                    alignment=ft.alignment.center,
-                                    padding=ft.Padding(10, 0, 0, 0),
+                                    alignment=alignment.center,
+                                    padding=Padding(10, 0, 0, 0),
                                 ),
                             ],
                             expand=True,
                         ),
                         width=200,
                     ),
-                    ft.Container(content=self.detail_view, expand=3),
+                    Container(content=self.detail_view, expand=3),
                 ],
                 expand=True,
             )
@@ -144,8 +170,8 @@ class GUIApp:
         self.password_list.controls.clear()
         for uid, info in self.password_manager.passwords.items():
             self.password_list.controls.append(
-                ft.ListTile(
-                    title=ft.Text(info["title"]),
+                ListTile(
+                    title=Text(info["title"]),
                     on_click=lambda e, uid=uid: self.show_password_details(uid),
                 )
             )
@@ -156,27 +182,27 @@ class GUIApp:
         self.detail_view.controls.clear()
         password_info = self.password_manager.get_password_info(uid)
 
-        edit_button = ft.IconButton(
-            icon=ft.Icons.EDIT,
-            icon_color=ft.Colors.BLUE,
+        edit_button = IconButton(
+            icon=Icons.EDIT,
+            icon_color=Colors.BLUE,
             tooltip="Edit Password",
             on_click=lambda e: self.edit_password(uid),
         )
 
-        delete_button = ft.IconButton(
-            icon=ft.Icons.DELETE,
-            icon_color=ft.Colors.RED,
+        delete_button = IconButton(
+            icon=Icons.DELETE,
+            icon_color=Colors.RED,
             tooltip="Delete Password",
             on_click=lambda e: self.delete_password(e),
         )
 
         self.detail_view.controls.append(
-            ft.Row(
+            Row(
                 [
-                    ft.Text("Password Details", weight="bold", size=20),
-                    ft.Row([edit_button, delete_button]),
+                    Text("Password Details", weight="bold", size=20),
+                    Row([edit_button, delete_button]),
                 ],
-                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                alignment=MainAxisAlignment.SPACE_BETWEEN,
             )
         )
 
@@ -206,53 +232,53 @@ class GUIApp:
 
                 def make_copy_value(v):
                     def copy_value(e):
-                        pyperclip.copy(v)
+                        pyperclip_copy(v)
 
                     return copy_value
 
-                eye_button = ft.IconButton(
-                    icon=ft.Icons.VISIBILITY,
+                eye_button = IconButton(
+                    icon=Icons.VISIBILITY,
                     tooltip="Show/Hide Password",
                     on_click=make_toggle_visibility(key, value),
                 )
 
-                copy_button = ft.IconButton(
-                    icon=ft.Icons.COPY,
+                copy_button = IconButton(
+                    icon=Icons.COPY,
                     tooltip="Copy Password",
                     on_click=make_copy_value(value),
                 )
 
-                row = ft.DataRow(
+                row = DataRow(
                     cells=[
-                        ft.DataCell(ft.Text(key)),
-                        ft.DataCell(ft.Text(password_text)),
-                        ft.DataCell(ft.Row([eye_button, copy_button])),
+                        DataCell(Text(key)),
+                        DataCell(Text(password_text)),
+                        DataCell(Row([eye_button, copy_button])),
                     ]
                 )
                 table_rows.append(row)
             else:
-                copy_button = ft.IconButton(
-                    icon=ft.Icons.COPY,
+                copy_button = IconButton(
+                    icon=Icons.COPY,
                     tooltip="Copy Value",
-                    on_click=lambda e, value=value: pyperclip.copy(value),
+                    on_click=lambda e, value=value: pyperclip_copy(value),
                 )
 
-                row = ft.DataRow(
+                row = DataRow(
                     cells=[
-                        ft.DataCell(ft.Text(key)),
-                        ft.DataCell(ft.Text(value)),
-                        ft.DataCell(copy_button),
+                        DataCell(Text(key)),
+                        DataCell(Text(value)),
+                        DataCell(copy_button),
                     ]
                 )
                 table_rows.append(row)
 
         if table_rows:
             self.detail_view.controls.append(
-                ft.DataTable(
+                DataTable(
                     columns=[
-                        ft.DataColumn(ft.Text("Field")),
-                        ft.DataColumn(ft.Text("Value")),
-                        ft.DataColumn(ft.Text("Actions")),
+                        DataColumn(Text("Field")),
+                        DataColumn(Text("Value")),
+                        DataColumn(Text("Actions")),
                     ],
                     rows=table_rows,
                 )
@@ -265,15 +291,15 @@ class GUIApp:
         custom_fields = []
 
         def add_custom_field(e):
-            field_name = ft.TextField(label="Field Name")
-            field_value = ft.TextField(label="Field Value")
-            remove_button = ft.IconButton(
-                icon=ft.Icons.REMOVE,
-                icon_color=ft.Colors.RED,
+            field_name = TextField(label="Field Name")
+            field_value = TextField(label="Field Value")
+            remove_button = IconButton(
+                icon=Icons.REMOVE,
+                icon_color=Colors.RED,
                 on_click=lambda e: remove_custom_field(field_row),
             )
 
-            field_row = ft.Row([field_name, field_value, remove_button])
+            field_row = Row([field_name, field_value, remove_button])
             custom_fields.append((field_name, field_value))
             custom_fields_container.controls.append(field_row)
             self.page.update()
@@ -309,46 +335,46 @@ class GUIApp:
 
         self.detail_view.controls.clear()
 
-        title_field = ft.TextField(label="Title", value=password_info.get("title", ""))
-        password_field = ft.TextField(
+        title_field = TextField(label="Title", value=password_info.get("title", ""))
+        password_field = TextField(
             label="Password", value=password_info.get("password", ""), password=True
         )
-        note_field = ft.TextField(label="Note", value=password_info.get("note", ""))
+        note_field = TextField(label="Note", value=password_info.get("note", ""))
 
-        custom_fields_container = ft.Column()
+        custom_fields_container = Column()
         for key, value in password_info.items():
             if key not in ["title", "password", "note", "create-time", "update-time"]:
-                field_name = ft.TextField(label="Field Name", value=key)
-                field_value = ft.TextField(label="Field Value", value=value)
-                remove_button = ft.IconButton(
-                    icon=ft.Icons.REMOVE,
-                    icon_color=ft.Colors.RED,
+                field_name = TextField(label="Field Name", value=key)
+                field_value = TextField(label="Field Value", value=value)
+                remove_button = IconButton(
+                    icon=Icons.REMOVE,
+                    icon_color=Colors.RED,
                     on_click=lambda e, field_row=None: remove_custom_field(field_row),
                 )
 
-                field_row = ft.Row([field_name, field_value, remove_button])
+                field_row = Row([field_name, field_value, remove_button])
                 custom_fields.append((field_name, field_value))
                 custom_fields_container.controls.append(field_row)
 
-        add_field_button = ft.ElevatedButton(
+        add_field_button = ElevatedButton(
             text="Add Custom Field", on_click=add_custom_field
         )
 
-        submit_button = ft.ElevatedButton(text="Submit", on_click=on_submit)
-        cancel_button = ft.ElevatedButton(text="Cancel", on_click=on_cancel)
+        submit_button = ElevatedButton(text="Submit", on_click=on_submit)
+        cancel_button = ElevatedButton(text="Cancel", on_click=on_cancel)
 
         self.detail_view.controls.append(
-            ft.Column(
+            Column(
                 [
-                    ft.Text("Edit Password", weight="bold", size=20),
+                    Text("Edit Password", weight="bold", size=20),
                     title_field,
                     password_field,
                     note_field,
                     custom_fields_container,
                     add_field_button,
-                    ft.Row(
+                    Row(
                         [submit_button, cancel_button],
-                        alignment=ft.MainAxisAlignment.END,
+                        alignment=MainAxisAlignment.END,
                     ),
                 ],
             )
@@ -360,15 +386,15 @@ class GUIApp:
         custom_fields = []
 
         def add_custom_field(e):
-            field_name = ft.TextField(label="Field Name")
-            field_value = ft.TextField(label="Field Value")
-            remove_button = ft.IconButton(
-                icon=ft.Icons.REMOVE,
-                icon_color=ft.Colors.RED,
+            field_name = TextField(label="Field Name")
+            field_value = TextField(label="Field Value")
+            remove_button = IconButton(
+                icon=Icons.REMOVE,
+                icon_color=Colors.RED,
                 on_click=lambda e: remove_custom_field(field_row),
             )
 
-            field_row = ft.Row([field_name, field_value, remove_button])
+            field_row = Row([field_name, field_value, remove_button])
             custom_fields.append((field_name, field_value))
             custom_fields_container.controls.append(field_row)
             self.page.update()
@@ -400,14 +426,14 @@ class GUIApp:
             self.update_password_list()
             self.detail_view.controls.clear()
             self.detail_view.controls.append(
-                ft.Text("Password added successfully!", color=ft.Colors.GREEN)
+                Text("Password added successfully!", color=Colors.GREEN)
             )
             self.page.update()
 
         def on_cancel(e):
             self.detail_view.controls.clear()
             self.detail_view.controls.append(
-                ft.Text("Password addition canceled.", color=ft.Colors.BLUE)
+                Text("Password addition canceled.", color=Colors.BLUE)
             )
             self.page.update()
 
@@ -416,7 +442,7 @@ class GUIApp:
             if not base_text:
                 return
 
-            hash_obj = hashlib.sha256(base_text.encode())
+            hash_obj = sha256(base_text.encode())
             hash_value = hash_obj.hexdigest()
 
             password_length = int(length_slider.value)
@@ -426,41 +452,41 @@ class GUIApp:
 
         def copy_generated_password(e):
             if password_result.value:
-                pyperclip.copy(password_result.value)
+                pyperclip_copy(password_result.value)
 
         def update_length_label(e):
             length_label.value = f"パスワード長: {int(length_slider.value)}"
             self.page.update()
 
         self.detail_view.controls.clear()
-        title_field = ft.TextField(label="Title")
-        password_field = ft.TextField(label="Password", password=True)
-        note_field = ft.TextField(label="Note")
+        title_field = TextField(label="Title")
+        password_field = TextField(label="Password", password=True)
+        note_field = TextField(label="Note")
 
-        custom_fields_container = ft.Column()
+        custom_fields_container = Column()
 
-        add_field_button = ft.ElevatedButton(
+        add_field_button = ElevatedButton(
             text="Add Custom Field", on_click=add_custom_field
         )
 
-        submit_button = ft.ElevatedButton(text="Submit", on_click=on_submit)
-        cancel_button = ft.ElevatedButton(text="Cancel", on_click=on_cancel)
+        submit_button = ElevatedButton(text="Submit", on_click=on_submit)
+        cancel_button = ElevatedButton(text="Cancel", on_click=on_cancel)
 
-        password_generator_container = ft.Container(
-            content=ft.Column(
+        password_generator_container = Container(
+            content=Column(
                 [
-                    ft.Text("パスワード生成", weight="bold", size=16),
-                    ft.Row(
+                    Text("パスワード生成", weight="bold", size=16),
+                    Row(
                         [
-                            ft.Text("元となる文字: "),
-                            password_seed_field := ft.TextField(
+                            Text("元となる文字: "),
+                            password_seed_field := TextField(
                                 hint_text="ハッシュ化する文字を入力", expand=True
                             ),
                         ]
                     ),
-                    ft.Row(
+                    Row(
                         [
-                            length_slider := ft.Slider(
+                            length_slider := Slider(
                                 min=4,
                                 max=64,
                                 value=12,
@@ -471,21 +497,21 @@ class GUIApp:
                             ),
                         ]
                     ),
-                    length_label := ft.Text("パスワード長: 12"),
-                    ft.Row(
+                    length_label := Text("パスワード長: 12"),
+                    Row(
                         [
-                            ft.ElevatedButton(
+                            ElevatedButton(
                                 text="生成",
                                 on_click=generate_password,
-                                icon=ft.Icons.PASSWORD,
+                                icon=Icons.PASSWORD,
                             ),
                         ]
                     ),
-                    ft.Row(
+                    Row(
                         [
-                            password_result := ft.Text("", expand=True),
-                            ft.IconButton(
-                                icon=ft.Icons.COPY,
+                            password_result := Text("", expand=True),
+                            IconButton(
+                                icon=Icons.COPY,
                                 tooltip="Copy Generated Password",
                                 on_click=copy_generated_password,
                             ),
@@ -494,24 +520,24 @@ class GUIApp:
                 ]
             ),
             padding=10,
-            border=ft.border.all(1, ft.Colors.GREY_400),
+            border=border.all(1, Colors.GREY_400),
             border_radius=10,
         )
 
         self.detail_view.controls.append(
-            ft.Column(
+            Column(
                 [
-                    ft.Text("Add New Password", weight="bold"),
+                    Text("Add New Password", weight="bold"),
                     title_field,
                     password_field,
                     note_field,
                     custom_fields_container,
                     add_field_button,
-                    ft.Row(
+                    Row(
                         [submit_button, cancel_button],
-                        alignment=ft.MainAxisAlignment.END,
+                        alignment=MainAxisAlignment.END,
                     ),
-                    ft.Divider(),
+                    Divider(),
                     password_generator_container,
                 ]
             )
@@ -524,7 +550,7 @@ class GUIApp:
         if not selected_uid:
             self.detail_view.controls.clear()
             self.detail_view.controls.append(
-                ft.Text("No password selected!", color=ft.Colors.RED)
+                Text("No password selected!", color=Colors.RED)
             )
             self.page.update()
             return
@@ -534,30 +560,30 @@ class GUIApp:
             self.update_password_list()
             self.detail_view.controls.clear()
             self.detail_view.controls.append(
-                ft.Text("Password deleted successfully!", color=ft.Colors.GREEN)
+                Text("Password deleted successfully!", color=Colors.GREEN)
             )
             self.page.update()
 
         def on_cancel(e):
             self.detail_view.controls.clear()
             self.detail_view.controls.append(
-                ft.Text("Password deletion canceled.", color=ft.Colors.BLUE)
+                Text("Password deletion canceled.", color=Colors.BLUE)
             )
             self.page.update()
 
         self.detail_view.controls.clear()
         self.detail_view.controls.append(
-            ft.Column(
+            Column(
                 [
-                    ft.Text(
+                    Text(
                         "Are you sure you want to delete this password?", weight="bold"
                     ),
-                    ft.Row(
+                    Row(
                         [
-                            ft.ElevatedButton(text="Yes", on_click=on_confirm),
-                            ft.ElevatedButton(text="No", on_click=on_cancel),
+                            ElevatedButton(text="Yes", on_click=on_confirm),
+                            ElevatedButton(text="No", on_click=on_cancel),
                         ],
-                        alignment=ft.MainAxisAlignment.END,
+                        alignment=MainAxisAlignment.END,
                     ),
                 ]
             )
