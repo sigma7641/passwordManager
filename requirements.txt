@@ -1,0 +1,4 @@
+flet==0.27.6
+pyperclip==1.8.2
+nest-asyncio==1.6.0
+pycryptodome==3.17.0

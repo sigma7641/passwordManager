@@ -1,0 +1,4 @@
+*.aes
+password_manager.egg-info
+venv
+__pycache__
