@@ -32,7 +32,29 @@ class GUIApp:
             master_password = master_password_field.value
             try:
                 self.password_manager = PasswordManager(master_password)
-                self.show_main_screen()
+                # ローディング表示を追加
+                loading = ft.ProgressRing()
+                loading_text = ft.Text("パスワードを読み込んでいます...")
+                self.page.clean()
+                self.page.add(
+                    ft.Column(
+                        [loading, loading_text],
+                        alignment=ft.MainAxisAlignment.CENTER,
+                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    )
+                )
+
+                def on_load_complete(success, error):
+                    if success:
+                        self.show_main_screen()
+                    else:
+                        self.show_master_password_screen(
+                            f"Failed to load passwords: {error}. Please try again."
+                        )
+
+                # 非同期でパスワードを読み込む
+                self.password_manager.load_passwords(callback=on_load_complete)
+
             except ValueError as ex:
                 self.show_master_password_screen(
                     f"Invalid Master Password: {str(ex)}. Please try again."
