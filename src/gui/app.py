@@ -280,6 +280,67 @@ class GUIApp:
                 )
                 table_rows.append(row)
 
+        # OTP行の追加
+        if "winauth_name" in password_info:
+            otp_generator = self.password_manager.get_otp(uid)
+            if otp_generator:
+                otp_code_text = Text("", weight="bold")
+                remaining_time_text = Text("", color=Colors.BLUE, size=12)
+                progress_ring = ProgressRing(
+                    width=16, height=16, stroke_width=2, visible=False
+                )
+
+                def make_copy_otp():
+                    def copy_otp(e):
+                        if otp_code_text.value:
+                            pyperclip_copy(otp_code_text.value)
+
+                    return copy_otp
+
+                generate_button = ElevatedButton(
+                    text="Generate",
+                    on_click=lambda e: self.generate_otp(
+                        otp_generator,
+                        otp_code_text,
+                        remaining_time_text,
+                        generate_button,
+                        progress_ring,
+                    ),
+                    style=ButtonStyle(
+                        padding=Padding(8, 4, 8, 4),
+                    ),
+                )
+
+                copy_button = IconButton(
+                    icon=Icons.COPY,
+                    tooltip="Copy OTP",
+                    on_click=make_copy_otp(),
+                )
+
+                otp_row = DataRow(
+                    cells=[
+                        DataCell(Text("OTP")),
+                        DataCell(
+                            Row(
+                                [
+                                    otp_code_text,
+                                    remaining_time_text,
+                                    progress_ring,
+                                ],
+                                alignment=MainAxisAlignment.START,
+                                spacing=10,
+                            )
+                        ),
+                        DataCell(
+                            Row(
+                                [generate_button, copy_button],
+                                alignment=MainAxisAlignment.START,
+                            )
+                        ),
+                    ]
+                )
+                table_rows.append(otp_row)
+
         if table_rows:
             self.detail_view.controls.append(
                 DataTable(
@@ -291,63 +352,6 @@ class GUIApp:
                     rows=table_rows,
                 )
             )
-
-        # OTP生成機能の追加（テーブルの下に配置）
-        if "winauth_name" in password_info:
-            otp_generator = self.password_manager.get_otp(uid)
-            if otp_generator:
-                otp_container = Container(
-                    content=Column(
-                        [
-                            Text("OTP Generator", weight="bold", size=16),
-                            Row(
-                                [
-                                    Text("Name: " + otp_generator.name),
-                                ],
-                            ),
-                            Row(
-                                [
-                                    otp_code_text := Text("", size=20, weight="bold"),
-                                ],
-                                alignment=MainAxisAlignment.CENTER,
-                            ),
-                            Row(
-                                [
-                                    remaining_time_text := Text("", color=Colors.BLUE),
-                                    progress_ring := ProgressRing(
-                                        width=16,
-                                        height=16,
-                                        stroke_width=2,
-                                        visible=False,
-                                    ),
-                                ],
-                                alignment=MainAxisAlignment.CENTER,
-                            ),
-                            Row(
-                                [
-                                    generate_button := ElevatedButton(
-                                        text="Generate OTP",
-                                        on_click=lambda e: self.generate_otp(
-                                            otp_generator,
-                                            otp_code_text,
-                                            remaining_time_text,
-                                            generate_button,
-                                            progress_ring,
-                                        ),
-                                    ),
-                                ],
-                                alignment=MainAxisAlignment.CENTER,
-                            ),
-                        ],
-                        spacing=10,
-                        horizontal_alignment=CrossAxisAlignment.CENTER,
-                    ),
-                    padding=20,
-                    border=border.all(1, Colors.GREY_400),
-                    border_radius=10,
-                    margin=Padding(0, 20, 0, 0),  # 上部に余白を追加
-                )
-                self.detail_view.controls.append(otp_container)
 
         self.page.update()
 
@@ -673,7 +677,7 @@ class GUIApp:
         """残り時間のカウントダウンを行います"""
         try:
             while remaining_seconds > 0:
-                remaining_time_text.value = f"次の更新まで {remaining_seconds}秒"
+                remaining_time_text.value = f"({remaining_seconds}秒)"
                 self.page.update()
                 await asyncio.sleep(1)
                 remaining_seconds -= 1
