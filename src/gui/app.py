@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime
 from hashlib import sha256
 
@@ -51,7 +52,14 @@ class GUIApp:
         self.page.title = "Password Manager"
         self.page.window_width = 800
         self.page.window_height = 600
+        # イベントループを設定
+        self.page.on_event = lambda e: self.handle_page_event(e)
         self.show_master_password_screen()
+
+    def handle_page_event(self, e):
+        """ページイベントを処理します"""
+        if hasattr(e, "data") and e.data == "timer_tick":
+            self.page.update()
 
     def show_master_password_screen(self, error_message=None):
         self.page.clean()
@@ -284,6 +292,63 @@ class GUIApp:
                 )
             )
 
+        # OTP生成機能の追加（テーブルの下に配置）
+        if "winauth_name" in password_info:
+            otp_generator = self.password_manager.get_otp(uid)
+            if otp_generator:
+                otp_container = Container(
+                    content=Column(
+                        [
+                            Text("OTP Generator", weight="bold", size=16),
+                            Row(
+                                [
+                                    Text("Name: " + otp_generator.name),
+                                ],
+                            ),
+                            Row(
+                                [
+                                    otp_code_text := Text("", size=20, weight="bold"),
+                                ],
+                                alignment=MainAxisAlignment.CENTER,
+                            ),
+                            Row(
+                                [
+                                    remaining_time_text := Text("", color=Colors.BLUE),
+                                    progress_ring := ProgressRing(
+                                        width=16,
+                                        height=16,
+                                        stroke_width=2,
+                                        visible=False,
+                                    ),
+                                ],
+                                alignment=MainAxisAlignment.CENTER,
+                            ),
+                            Row(
+                                [
+                                    generate_button := ElevatedButton(
+                                        text="Generate OTP",
+                                        on_click=lambda e: self.generate_otp(
+                                            otp_generator,
+                                            otp_code_text,
+                                            remaining_time_text,
+                                            generate_button,
+                                            progress_ring,
+                                        ),
+                                    ),
+                                ],
+                                alignment=MainAxisAlignment.CENTER,
+                            ),
+                        ],
+                        spacing=10,
+                        horizontal_alignment=CrossAxisAlignment.CENTER,
+                    ),
+                    padding=20,
+                    border=border.all(1, Colors.GREY_400),
+                    border_radius=10,
+                    margin=Padding(0, 20, 0, 0),  # 上部に余白を追加
+                )
+                self.detail_view.controls.append(otp_container)
+
         self.page.update()
 
     def edit_password(self, uid):
@@ -418,6 +483,10 @@ class GUIApp:
                 "update-time": current_time,
             }
 
+            # WinAuth名が入力されている場合は追加
+            if winauth_field.value.strip():
+                password_info["winauth_name"] = winauth_field.value.strip()
+
             for field_name, field_value in custom_fields:
                 if field_name.value.strip() and field_value.value.strip():
                     password_info[field_name.value.strip()] = field_value.value.strip()
@@ -462,6 +531,9 @@ class GUIApp:
         title_field = TextField(label="Title")
         password_field = TextField(label="Password", password=True)
         note_field = TextField(label="Note")
+        winauth_field = TextField(
+            label="WinAuth Name", hint_text="WinAuthのXMLファイルの<name>タグの値を入力"
+        )
 
         custom_fields_container = Column()
 
@@ -531,6 +603,7 @@ class GUIApp:
                     title_field,
                     password_field,
                     note_field,
+                    winauth_field,  # WinAuthフィールドを追加
                     custom_fields_container,
                     add_field_button,
                     Row(
@@ -588,3 +661,61 @@ class GUIApp:
                 ]
             )
         )
+
+    async def countdown_timer(
+        self,
+        remaining_seconds: int,
+        remaining_time_text,
+        otp_code_text,
+        generate_button,
+        progress_ring,
+    ):
+        """残り時間のカウントダウンを行います"""
+        try:
+            while remaining_seconds > 0:
+                remaining_time_text.value = f"次の更新まで {remaining_seconds}秒"
+                self.page.update()
+                await asyncio.sleep(1)
+                remaining_seconds -= 1
+
+            # タイマー終了時の処理
+            otp_code_text.value = ""
+            remaining_time_text.value = ""
+            generate_button.disabled = False
+            progress_ring.visible = False
+            self.page.update()
+        except Exception as e:
+            print(f"Countdown timer error: {e}")
+
+    def generate_otp(
+        self,
+        otp_generator,
+        otp_code_text,
+        remaining_time_text,
+        generate_button,
+        progress_ring,
+    ):
+        """OTPを生成し、タイマーを開始します"""
+        try:
+            otp_info = otp_generator.generate()
+            otp_code_text.value = otp_info.otp
+            generate_button.disabled = True
+            progress_ring.visible = True
+            self.page.update()
+
+            # カウントダウンタイマーを開始
+            asyncio.run(
+                self.countdown_timer(
+                    otp_info.remaining_seconds,
+                    remaining_time_text,
+                    otp_code_text,
+                    generate_button,
+                    progress_ring,
+                )
+            )
+        except Exception as e:
+            print(f"Generate OTP error: {e}")
+            # エラー時の状態リセット
+            generate_button.disabled = False
+            progress_ring.visible = False
+            self.page.update()

@@ -3,9 +3,14 @@ import json
 import os
 import threading
 import uuid
+import xml.etree.ElementTree as ET
 from threading import Event
+from typing import Optional
+
+import yaml
 
 from src.core.encryption import decrypt_aes, encrypt_aes
+from src.core.otp_generator import OTPGenerator
 from src.utils.logger import debug
 
 
@@ -16,13 +21,50 @@ class PasswordManager:
         self._is_loaded = False
         self._load_lock = threading.Lock()
         self._load_event = Event()
+        self._config = self._load_or_create_config()
+        self._winauth_data = {}
+
+    def _load_or_create_config(self):
+        """設定ファイルを読み込むか、存在しない場合は作成します"""
+        if not os.path.exists("config.yaml"):
+            config = {
+                "password_file": "passwords.json.aes",
+                "winauth_file": "winauth.xml",
+            }
+            with open("config.yaml", "w") as f:
+                yaml.dump(config, f)
+            return config
+
+        with open("config.yaml", "r") as f:
+            return yaml.safe_load(f)
+
+    def _load_winauth_xml(self):
+        """WinAuthのXMLファイルを読み込みます"""
+        if not os.path.exists(self._config["winauth_file"]):
+            return
+
+        tree = ET.parse(self._config["winauth_file"])
+        root = tree.getroot()
+
+        for auth in root.findall("WinAuthAuthenticator"):
+            name = auth.findtext("name")
+            if not name:
+                continue
+
+            auth_data = auth.find("authenticatordata")
+            if auth_data is None:
+                continue
+
+            secretdata = auth_data.findtext("secretdata")
+            if secretdata:
+                self._winauth_data[name] = secretdata
 
     def _load_passwords_async(self, callback=None):
         def worker():
             try:
                 with self._load_lock:
-                    if os.path.exists("passwords.json.aes"):
-                        with open("passwords.json.aes", "rb") as f:
+                    if os.path.exists(self._config["password_file"]):
+                        with open(self._config["password_file"], "rb") as f:
                             encrypted_data = f.read()
 
                         try:
@@ -31,6 +73,8 @@ class PasswordManager:
                             )
                             self.passwords = json.loads(decrypted_data)
                             self._is_loaded = True
+                            # WinAuthのデータを読み込み
+                            self._load_winauth_xml()
                             if callback:
                                 callback(True, None)
                         except ValueError as e:
@@ -75,7 +119,7 @@ class PasswordManager:
                 self._ensure_loaded()
                 data = json.dumps(self.passwords).encode()
                 encrypted_data = encrypt_aes(data, self._master_password)
-                with open("passwords.json.aes", "wb") as f:
+                with open(self._config["password_file"], "wb") as f:
                     f.write(encrypted_data)
                 if callback:
                     callback(True, None)
@@ -122,3 +166,19 @@ class PasswordManager:
             raise KeyError(f"Password with index {index} not found.")
         self._save_passwords_async(callback)
         return True
+
+    @debug
+    def get_otp(self, password_id: str) -> Optional[OTPGenerator]:
+        """パスワードに紐づくOTP生成器を取得します"""
+        self._ensure_loaded()
+        try:
+            password_info = self.passwords[password_id]
+            winauth_name = password_info.get("winauth_name")
+            if not winauth_name or winauth_name not in self._winauth_data:
+                return None
+
+            return OTPGenerator.from_winauth_data(
+                name=winauth_name, secret_data=self._winauth_data[winauth_name]
+            )
+        except Exception:
+            return None

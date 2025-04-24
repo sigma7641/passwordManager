@@ -9,5 +9,6 @@ setup(
         "pycryptodome",
         "pyperclip",
         "nest-asyncio",
+        "pyotp",
     ],
 )
