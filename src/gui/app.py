@@ -412,7 +412,7 @@ class GUIApp:
             # カスタムフィールドを追加（システムフィールドは除外）
             for field_name, field_value in custom_fields:
                 name = field_name.value.strip()
-                value = field_value.value.strip()
+                value = field_value
                 if name and value and name not in system_fields:
                     updated_info[name] = value
 
