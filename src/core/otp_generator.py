@@ -1,5 +1,7 @@
 import hashlib
 import time
+from base64 import b32encode
+from binascii import unhexlify
 from dataclasses import dataclass
 from typing import Optional
 
@@ -46,19 +48,25 @@ class OTPGenerator:
         try:
             parts = secret_data.strip().split()
             if len(parts) >= 4:
-                secret = parts[0]
+                hex_secret = parts[0]
                 digits = int(parts[1])
                 algo = parts[2].upper()
                 interval = int(parts[3])
             else:
-                secret = parts[0]
+                hex_secret = parts[0]
                 digits = 6
                 algo = "SHA1"
                 interval = 30
 
+            # 16新数からバイナリに変換
+            binary_secret = unhexlify(hex_secret)
+
+            # バイナリからBase32に変換
+            base32_secret = b32encode(binary_secret).decode("utf-8")
+
             return OTPGenerator(
                 name=name,
-                secret=secret,
+                secret=base32_secret,
                 digits=digits,
                 algorithm=algo,
                 interval=interval,
