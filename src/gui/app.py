@@ -486,7 +486,7 @@ class GUIApp:
             remove_button = IconButton(
                 icon=Icons.REMOVE,
                 icon_color=Colors.RED,
-                on_click=lambda e: remove_custom_field(field_row),
+                on_click=lambda e, row=None: remove_custom_field(field_row),
             )
 
             field_row = Row([field_name, field_value, remove_button])
@@ -496,10 +496,12 @@ class GUIApp:
 
         def remove_custom_field(field_row):
             custom_fields_container.controls.remove(field_row)
+            field_name = field_row.controls[0]
+            field_value = field_row.controls[1]
             custom_fields[:] = [
                 (name, value)
                 for name, value in custom_fields
-                if name != field_row.controls[0] and value != field_row.controls[1]
+                if name != field_name and value != field_value
             ]
             self.page.update()
 
@@ -514,12 +516,14 @@ class GUIApp:
             }
 
             # WinAuth名が入力されている場合は追加
-            if winauth_field.value.strip():
+            if winauth_field.value and winauth_field.value.strip():
                 password_info["winauth_name"] = winauth_field.value.strip()
 
             for field_name, field_value in custom_fields:
-                if field_name.value.strip() and field_value.value.strip():
-                    password_info[field_name.value.strip()] = field_value.value.strip()
+                name = field_name.value
+                value = field_value.value
+                if name and value:  # 空でない場合のみ追加
+                    password_info[name.strip()] = value.strip()
 
             self.password_manager.add_password(password_info)
             self.update_password_list()
