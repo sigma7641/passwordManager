@@ -366,8 +366,7 @@ class GUIApp:
             "note",
             "create-time",
             "update-time",
-            "winauth_name",  # 標準的な形式に統一
-        ]
+        ]  # winauth_nameをシステムフィールドから除外
 
         def add_custom_field(e):
             field_name = TextField(label="Field Name")
@@ -410,20 +409,13 @@ class GUIApp:
             if "create-time" in password_info:
                 updated_info["create-time"] = password_info["create-time"]
 
-            # WinAuth名を統一された形式で保持
-            if "winauth_name" in password_info:
-                updated_info["winauth_name"] = password_info["winauth_name"]
-            elif "winauth-name" in password_info:  # 古い形式のサポート
-                updated_info["winauth_name"] = password_info["winauth-name"]
-
-            # カスタムフィールドのみを追加（システムフィールドは除外）
+            # カスタムフィールドを追加（システムフィールドは除外）
             for field_name, field_value in custom_fields:
                 name = field_name.value.strip()
                 value = field_value.value.strip()
                 if name and value and name not in system_fields:
                     updated_info[name] = value
 
-            # パスワード情報を更新
             self.password_manager.update_password(uid, updated_info)
             self.update_password_list()
             self.show_password_details(uid)
@@ -447,10 +439,12 @@ class GUIApp:
                 field_value = TextField(label="Field Value", value=value)
                 field_row = Row([field_name, field_value])
 
+                # winauth_nameの場合は削除ボタンを無効化
                 remove_button = IconButton(
                     icon=Icons.REMOVE,
                     icon_color=Colors.RED,
                     on_click=lambda e, row=field_row: remove_custom_field(row),
+                    disabled=key in [],  # 削除できないフィールドを指定
                 )
 
                 field_row.controls.append(remove_button)
