@@ -201,7 +201,7 @@ class GUIApp:
             icon=Icons.DELETE,
             icon_color=Colors.RED,
             tooltip="Delete Password",
-            on_click=lambda e: self.delete_password(e),
+            on_click=lambda e: self.delete_password(),
         )
 
         self.detail_view.controls.append(
@@ -363,24 +363,30 @@ class GUIApp:
             field_name = TextField(label="Field Name")
             field_value = TextField(label="Field Value")
             remove_button = IconButton(
-                icon=Icons.REMOVE,
-                icon_color=Colors.RED,
-                on_click=lambda e: remove_custom_field(field_row),
+                icon=Icons.REMOVE, icon_color=Colors.RED, on_click=None  # 後で設定
             )
 
             field_row = Row([field_name, field_value, remove_button])
+
+            # remove_buttonのon_clickを設定
+            remove_button.on_click = lambda e, row=field_row: remove_custom_field(row)
+
             custom_fields.append((field_name, field_value))
             custom_fields_container.controls.append(field_row)
             self.page.update()
 
         def remove_custom_field(field_row):
-            custom_fields_container.controls.remove(field_row)
-            custom_fields[:] = [
-                (name, value)
-                for name, value in custom_fields
-                if name != field_row.controls[0] and value != field_row.controls[1]
-            ]
-            self.page.update()
+            if field_row in custom_fields_container.controls:
+                custom_fields_container.controls.remove(field_row)
+                # カスタムフィールドのリストも更新
+                field_name = field_row.controls[0]
+                field_value = field_row.controls[1]
+                custom_fields[:] = [
+                    (name, value)
+                    for name, value in custom_fields
+                    if name != field_name and value != field_value
+                ]
+                self.page.update()
 
         def on_submit(e):
             current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -391,6 +397,15 @@ class GUIApp:
                 "update-time": current_time,
             }
 
+            # 既存のcreate-timeを保持
+            if "create-time" in password_info:
+                updated_info["create-time"] = password_info["create-time"]
+
+            # WinAuth名が設定されている場合は保持
+            if "winauth_name" in password_info:
+                updated_info["winauth_name"] = password_info["winauth_name"]
+
+            # カスタムフィールドを追加
             for field_name, field_value in custom_fields:
                 if field_name.value.strip() and field_value.value.strip():
                     updated_info[field_name.value.strip()] = field_value.value.strip()
@@ -622,7 +637,7 @@ class GUIApp:
 
         self.page.update()
 
-    def delete_password(self, e):
+    def delete_password(self):  # eパラメータを削除
         selected_uid = self.selected_uid
         if not selected_uid:
             self.detail_view.controls.clear()
@@ -643,28 +658,41 @@ class GUIApp:
 
         def on_cancel(e):
             self.detail_view.controls.clear()
-            self.detail_view.controls.append(
-                Text("Password deletion canceled.", color=Colors.BLUE)
-            )
-            self.page.update()
+            self.show_password_details(selected_uid)  # キャンセル時は詳細画面に戻る
 
         self.detail_view.controls.clear()
         self.detail_view.controls.append(
             Column(
                 [
                     Text(
-                        "Are you sure you want to delete this password?", weight="bold"
+                        "このパスワードを削除してもよろしいですか？",
+                        weight="bold",
+                        size=16,
+                        color=Colors.RED,
                     ),
                     Row(
                         [
-                            ElevatedButton(text="Yes", on_click=on_confirm),
-                            ElevatedButton(text="No", on_click=on_cancel),
+                            ElevatedButton(
+                                text="はい",
+                                on_click=on_confirm,
+                                style=ButtonStyle(
+                                    color=Colors.WHITE,
+                                    bgcolor=Colors.RED,
+                                ),
+                            ),
+                            ElevatedButton(
+                                text="いいえ",
+                                on_click=on_cancel,
+                            ),
                         ],
                         alignment=MainAxisAlignment.END,
+                        spacing=10,
                     ),
-                ]
+                ],
+                spacing=20,
             )
         )
+        self.page.update()
 
     async def countdown_timer(
         self,
