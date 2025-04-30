@@ -359,6 +359,16 @@ class GUIApp:
         password_info = self.password_manager.get_password_info(uid)
         custom_fields = []
 
+        # システムフィールド（編集不可のフィールド）を定義
+        system_fields = [
+            "title",
+            "password",
+            "note",
+            "create-time",
+            "update-time",
+            "winauth_name",  # 標準的な形式に統一
+        ]
+
         def add_custom_field(e):
             field_name = TextField(label="Field Name")
             field_value = TextField(label="Field Value")
@@ -378,7 +388,6 @@ class GUIApp:
         def remove_custom_field(field_row):
             if field_row in custom_fields_container.controls:
                 custom_fields_container.controls.remove(field_row)
-                # カスタムフィールドのリストも更新
                 field_name = field_row.controls[0]
                 field_value = field_row.controls[1]
                 custom_fields[:] = [
@@ -397,19 +406,24 @@ class GUIApp:
                 "update-time": current_time,
             }
 
-            # 既存のcreate-timeを保持
+            # create-timeを保持
             if "create-time" in password_info:
                 updated_info["create-time"] = password_info["create-time"]
 
-            # WinAuth名が設定されている場合は保持
+            # WinAuth名を統一された形式で保持
             if "winauth_name" in password_info:
                 updated_info["winauth_name"] = password_info["winauth_name"]
+            elif "winauth-name" in password_info:  # 古い形式のサポート
+                updated_info["winauth_name"] = password_info["winauth-name"]
 
-            # カスタムフィールドを追加
+            # カスタムフィールドのみを追加（システムフィールドは除外）
             for field_name, field_value in custom_fields:
-                if field_name.value.strip() and field_value.value.strip():
-                    updated_info[field_name.value.strip()] = field_value.value.strip()
+                name = field_name.value.strip()
+                value = field_value.value.strip()
+                if name and value and name not in system_fields:
+                    updated_info[name] = value
 
+            # パスワード情報を更新
             self.password_manager.update_password(uid, updated_info)
             self.update_password_list()
             self.show_password_details(uid)
@@ -418,7 +432,6 @@ class GUIApp:
             self.show_password_details(uid)
 
         self.detail_view.controls.clear()
-
         title_field = TextField(label="Title", value=password_info.get("title", ""))
         password_field = TextField(
             label="Password", value=password_info.get("password", ""), password=True
@@ -426,17 +439,21 @@ class GUIApp:
         note_field = TextField(label="Note", value=password_info.get("note", ""))
 
         custom_fields_container = Column()
+
+        # カスタムフィールドの表示（システムフィールド以外）
         for key, value in password_info.items():
-            if key not in ["title", "password", "note", "create-time", "update-time"]:
+            if key not in system_fields:
                 field_name = TextField(label="Field Name", value=key)
                 field_value = TextField(label="Field Value", value=value)
+                field_row = Row([field_name, field_value])
+
                 remove_button = IconButton(
                     icon=Icons.REMOVE,
                     icon_color=Colors.RED,
-                    on_click=lambda e, field_row=None: remove_custom_field(field_row),
+                    on_click=lambda e, row=field_row: remove_custom_field(row),
                 )
 
-                field_row = Row([field_name, field_value, remove_button])
+                field_row.controls.append(remove_button)
                 custom_fields.append((field_name, field_value))
                 custom_fields_container.controls.append(field_row)
 

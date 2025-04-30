@@ -161,7 +161,8 @@ class PasswordManager:
     def update_password(self, index, password_info_dict, callback=None):
         self._ensure_loaded()
         try:
-            self.passwords[index].update(password_info_dict)
+            # 既存のエントリを完全に新しい情報で置き換え
+            self.passwords[index] = password_info_dict
         except KeyError:
             raise KeyError(f"Password with index {index} not found.")
         self._save_passwords_async(callback)
